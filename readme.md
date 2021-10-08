@@ -18,13 +18,6 @@
 | U50        | xilinx_u50_gen3x16_xdma_201920_3 | 2.6.655  |
 
 ### Vitis HLS 代码编写
-| -- kernel
-    | -- fft.cpp
-	| -- fft.h
-	| -- fft_test.cpp
-	| -- out.gold.data
-	| -- tcl_script.tcl
-
 创建Vitis HLS工程，最好另建立文件夹
 ```python
 vitis_hls tcl_script.tcl
