@@ -61,7 +61,9 @@ void get_in(DTYPE X_R[SIZE], DTYPE X_I[SIZE],DTYPE OUT_R[SIZE], DTYPE OUT_I[SIZE
 
 ### 4. Cosim 接口带宽限制
 Cosim运行之前需要综合，之后先运行Csim然后再Cosim，这一步之后可去Vivado里面看波形类似于RTL行为级别仿真
-<img src = imgs/Cosim.png width = "700">
+
+<img src = imgs/Cosim.png width = "700">  
+
 若出现Csim正确，Cosim失败，则原因可分为以下几点
  - 内存越界，csim中内存越界可能不会报错。硬件越界也可以正常运行但结果会错误
  - 接口带宽，并发同时访问带宽受限的端口，导致结果未被正确传输
@@ -72,11 +74,11 @@ Cosim运行之前需要综合，之后先运行Csim然后再Cosim，这一步之
 #### 5.1. HLS源文件
 
 将源文件fft.cpp以及fft.h拷贝到kernel文件夹内。这里需要注意，使用Makefile编译工程时，$\color{red}{顶层函数前一定要加extern "C"}$。否则kernel name会出现乱码。导致生成不了.xo文件
-头文件
+头文件：
 ```C++
 extern "C" void fft(DTYPE XX_R[SIZE], DTYPE XX_I[SIZE], DTYPE OUT_R[SIZE], DTYPE OUT_I[SIZE]);
 ```
-cpp文件：
+源文件：
 
 ```C++
 extern "C" void fft(DTYPE X_R[SIZE], DTYPE X_I[SIZE], DTYPE OUT_R[SIZE], DTYPE OUT_I[SIZE])
@@ -125,13 +127,13 @@ util.cpp, xcl2,cpp logger.cpp均可以复用，不用修改
 
 #### 5.4. makefile文件
 
-这里的makefile文件可以复用，换作其它工程基本不需要改变，直接全局搜索fft，替换为其它Vitis HLS顶层函数名字即可.这里面设定的时钟频率为300Mhz，需在makefile文件里修改。
+这里的makefile文件可以复用（这里仅限数据中心板子，基于HBM的；类似的ZCU版本，Xilinx GitHub库也有提供），换作其它工程基本不需要改变，直接全局搜索fft，替换为其它Vitis HLS顶层函数名字即可.这里面设定的时钟频率为300Mhz，需在makefile文件里修改。
 
 ### 6 软硬件仿真与硬件执行
 
-- **software emulation** 功能验证，这里可以是多任务多线程的验证。这里host端写的比较简单
-- **hardware emulation** kernel代码被编译成RTL硬件模块，跑在特定的模拟器上，可以得到cycle-level性能 
-- **hardware** 生成实际在FPGA上执行的二进制文件
+- ```software emulation``` 功能验证，这里可以是多任务多线程的验证。这里host端写的比较简单
+- ``hardware emulation`` kernel代码被编译成RTL硬件模块，跑在特定的模拟器上，可以得到cycle-level性能 
+- ``hardware``            生成实际在FPGA上执行的二进制文件
 ```python
 make build TARGET=sw_emu
 make build TARGET=hw_emu
@@ -143,8 +145,15 @@ make run TARGET=hw
 ```
 执行结果如下，数据量太小，扰动比较大0.09ms~0.120ms    
 <img src = imgs/hw_results.png>
+
 理论性能kernel latency如下
-$5621 cycles *(10/3 ns)/1000 = 0.01874 ms$
+```5621 cycles *(10/3 ns)/1000 = 0.01874 ms```
+#### 6.1 增加kernel计算量
+这里将HLS 中FFT kernel内部循环10000次以观察计算耗时。反复从HBM中取数据，计算然后返回至HBM。
+```191.871/10000=0.01918ms```非常接近Vitis HLS Cosim给出的latency值了。
+带宽这里一定是满足的，因此计算核心的计算量对测试性能影响也很大。
+
+<img src = imgs/fft_1024_10000.png>
 
 ### Reference
 
@@ -152,5 +161,4 @@ $5621 cycles *(10/3 ns)/1000 = 0.01874 ms$
 
 ### TODO
 
-- [ ] 将FFT kernel执行10000次测量时间。
 - [ ] host 端直接使用OpenCL调用方式，似乎目前主流使用Xilinx自己封装的API了。
