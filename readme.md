@@ -1,8 +1,5 @@
 
 ## Vitis部署FFT至U50教程
-
-[toc]
-
 ### 介绍
 文档主要包括以下内容
 - [x] Vitis HLS 以及 Vitis部署流程(据说比传统的Vivado方便)
@@ -102,10 +99,10 @@ slr=fft_instance:SLR0
 nk=fft:1:fft_instance
 ```
 自动生成的block design如下图所示，对初学者还是很友好的。可见,fft_instance则是kernel实例化的名字
-<img src = imgs/implement.png width="750">
+<img src = imgs/implement.png width="800">
 >综合，布线以及功耗数据都可以在中间生成的viviado工程中找到。Implementation后的资源报告如下：
 左侧:系统整体资源消耗，右侧vitis_analyzier给出的分部消耗。可以看出，在kernel较小时，系统其它资源消耗是比较大的，而且这里的kernel资源消耗和vitis_hls综合给出的差异还是比较大的。
-<img src=imgs/vivado_imple.png >
+<img src=imgs/vivado_imple.png width="800" >
 
 #### host 端代码编写
 
@@ -127,9 +124,6 @@ reinterpret_cast强制类型转换。**申请空间最好使用该方式，可�
 util.cpp, xcl2,cpp logger.cpp均可以复用，不用修改
 
 
-
-
-
 #### makefile文件
 这里的makefile文件可以复用，换作其它工程基本不需要改变，直接全局搜索fft，替换为其它Vitis HLS顶层函数名字即可.这里面设定的时钟频率为300Mhz，需在makefile文件里修改。
 
@@ -146,11 +140,11 @@ make build TARGET=hw
 ```python
 make run TARGET=hw
 ```
-执行结果如下，数据量太小，扰动比较大0.09ms~0.120ms
+执行结果如下，数据量太小，扰动比较大0.09ms~0.120ms    
 <img src = imgs/hw_results.png>
 理论性能kernel latency如下
 $5621 cycles *(10/3 ns)/1000 = 0.01874 ms$
-### Refence
+### Reference
   Xilinx 官方[Tutorials](https://github.com/Xilinx/Vitis-Tutorials/tree/2020.2/Runtime_and_System_Optimization/Design_Tutorials/01-host-code-opt) 和[documentation](https://www.xilinx.com/html_docs/xilinx2020_2/vitis_doc/wzc1553475252001.html)
 
 ### TODO
