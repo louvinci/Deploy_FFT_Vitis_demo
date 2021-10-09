@@ -119,10 +119,33 @@ reinterpret_cast强制类型转换。**申请空间最好使用该方式，可�
 	}
 	```
 - 调用kernel
-  这里的很多操作都是OpenCl通用的，可以去看OpenCL编程模型。Xcl2开头的则是xilinx 扩展的OpenCL库
+  初始化设备，编程FPGA，创建启动任务队列等操作都在answer.cpp中，换作其它程序几乎不变，这里摘取一小段。
+  ```C++
+  //***************************************** Step1 platform related operations
+  std::vector<cl::Device> devices = xcl::get_xil_devices();
+  cl::Device device = devices[0]; //the device 0
+  cl::Context context(device, NULL, NULL, NULL, &fail); //initial OpenCL environment
+  cl::CommandQueue q(context, device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &fail); //command queue
+  cl::Program::Binaries xclBins = xcl::import_binary_file(xclbin_path); //load the binary file
+  devices.resize(1);
+  cl::Program program(context, devices, xclBins, NULL, &fail); // pragram the fpga
+  ```
   
-
-util.cpp, xcl2,cpp logger.cpp均可以复用，不用修改
+- 端口绑定与设置参数：
+  ```C++
+  InR_buf = cl::Buffer(context, static_cast<cl_mem_flags>(CL_MEM_READ_ONLY |CL_MEM_USE_HOST_PTR),
+                            sizeof(DTYPE) * SIZE, In_R);
+  ...
+  fft_kernel.setArg(j++, InR_buf);//The same as the top function in Vitis HLS kernel
+  ```
+  
+ - **内存传输队列，计算任务启动与同步：**
+  ```C++
+  q.enqueueTask(fft_kernel, &events_write, &events_kernel[0]); //start fft kernel
+  clWaitForEvents(1, (const cl_event *)&events_kernel[0]); // wait the compute complete
+  ```
+  
+util.cpp, xcl2,cpp logger.cpp等均可以复用，不用修改
 
 
 #### 5.4. makefile文件
@@ -134,15 +157,15 @@ util.cpp, xcl2,cpp logger.cpp均可以复用，不用修改
 - ```software emulation``` 功能验证，这里可以是多任务多线程的验证。这里host端写的比较简单
 - ``hardware emulation`` kernel代码被编译成RTL硬件模块，跑在特定的模拟器上，可以得到cycle-level性能 
 - ``hardware``            生成实际在FPGA上执行的二进制文件
-```python
-make build TARGET=sw_emu
-make build TARGET=hw_emu
-make build TARGET=hw
-```
+  ```python
+ make build TARGET=sw_emu
+ make build TARGET=hw_emu
+ make build TARGET=hw
+  ```
 生成二进制文件大约1.5h。生成之后就可以硬件执行了。
-```python
-make run TARGET=hw
-```
+  ```python
+  make run TARGET=hw
+  ```
 执行结果如下，数据量太小，扰动比较大0.09ms~0.120ms    
 <img src = imgs/hw_results.png>
 
@@ -150,7 +173,7 @@ make run TARGET=hw
 ```5621 cycles *(10/3 ns)/1000 = 0.01874 ms```
 #### 6.1 增加kernel计算量
 这里将HLS 中FFT kernel内部循环10000次以观察计算耗时。反复从HBM中取数据，计算然后返回至HBM。
-```191.871/10000=0.01918ms```非常接近Vitis HLS Cosim给出的latency值了。
+```191.897/10000=0.01919ms```非常接近Vitis HLS Cosim给出的latency值了。
 带宽这里一定是满足的，因此计算核心的计算量对测试性能影响也很大。
 
 <img src = imgs/fft_1024_10000.png>
